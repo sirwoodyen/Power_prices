@@ -26,13 +26,20 @@ the rest should work  as long as you install the nessecary modules.
 
 some nice to know stuff...
 
+
 #this to make my LCD display work
+
 sudo rm -rf LCD-show
 git clone https://github.com/goodtft/LCD-show.git
+
 chmod -R 755 LCD-show
+
 cd LCD-show/
+
 sudo ./LCD35-show
 
-#configure font and size 
+
+#configure font and size
+
 sudo dpkg-reconfigure console-setup
 
