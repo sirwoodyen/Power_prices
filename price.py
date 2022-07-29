@@ -133,7 +133,7 @@ def runProgram():
                 config.set("file", "updated_testmode", str(datetime.now().strftime(timestampStandard)))
             else:
                 config.set("file", "updated", str(datetime.now().strftime(timestampStandard)))
-            updateconfig() # TODO check if the date actually gets updated in the ini file. seems like the testmode is, but not sure if the regular is.
+            updateconfig() 
             timecheck = datetime.now()
             jupdate = timecheck.strftime(timestampStandard)
             newday=False
