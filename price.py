@@ -8,8 +8,12 @@ import os
 import shutil
 import time
 import cursor
+import logging
 
-#rom pyparsing import And
+logging.basicConfig(filename="price.log", level=logging.DEBUG)
+#logging.info("Program starting up - {}".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+newday = False
 
 #This is the config.ini file
 config_file = "config.ini"
@@ -20,6 +24,8 @@ config.read(config_file)
 #teststrings - to show or hode those strings.
 teststrings = config.getboolean("test", "teststrings")
 testmode = config.getboolean("test", "testmode")
+debugLogger = config.getboolean("test", "debuglogger")
+
 
 #from config file, i feel it is self explainatory.
 cursorhide = config.getboolean("app", "cursor_hide")
@@ -29,10 +35,30 @@ def testdef(teststring):
     if teststrings == True:
         print(teststring)
 
+#if debug/logging is activated in the config file. then this will be activated.
+loggingstarted = False
+def debug_logger(string):
+    global  loggingstarted
+    if debugLogger and loggingstarted == False:
+        logging.info(string)
+        loggingstarted = True
+    elif debugLogger and loggingstarted == True:
+        timestatement = " - Time: " + datetime.now().strftime("%H:%M:%S")
+        output = timestatement + " - " + string
+        logging.info(output)
+    elif debugLogger and newday:
+        #timestatement = " - New day started" + datetime.now().strftime("%Y-%m-%d")
+        logging.info(string)
+
 #function to clear the terminal window
 #clear = lambda: system("cls") #this line is for windows, but then comment or delete the def clear() function.
 def clear():
 	os.system('clear')
+
+if testmode:
+    debug_logger(" - Program starting up - {}".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " - Test mode"))
+else:
+    debug_logger(" - Program starting up - {}".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
 #putting together some API stuff - do not change here! do it in the config.ini file!
 if testmode:
@@ -59,7 +85,7 @@ if testmode:
 else:
     json_price_file = Path(config["file"]["json_file"])
 file_exist = False
-newday = False
+
 
 #center all text
 centertext = config.getboolean("app", "centertext")
@@ -93,8 +119,10 @@ def updateconfig():
         config.write(configfile)
         if teststrings == True:
             testdef("config value stored...\n")
+            debug_logger("Config is updated")
 #if it is a new day, it shall return True
 def checkNeedUpdate():
+    global today
     global jsonfile_updated
     global newday
     if testmode:
@@ -106,13 +134,18 @@ def checkNeedUpdate():
     if checks.day != newdate.day:
         testdef(f"check day:{checks.day} newday:{newdate.day}")
         jsonfile_updated = jsonfile_updated + 1
+
         newday = True
-        
-    
+        today = str(datetime.now().date())
+        debug_logger("")
+        debug_logger( "New day started - " + datetime.now().strftime("%Y-%m-%d"))
+
 #this is THE program...
 def runProgram():
     global newday
     global jupdate
+    global today
+    today = str(datetime.now().date())
     now = datetime.now()
     mytime = now.strftime(timestamp_Clock)
     testdef("Loop count: " + str(counter) + " - " + str(mytime))
@@ -124,16 +157,19 @@ def runProgram():
             data = json.load(fcc_file)
     else:
         with urlopen(uri_api) as response:
+            debug_logger(f"fetching json from: {uri_api} - Zone: {theregion}")
             if file_exist == False:
-                testdef("file did not exist... fetching data... make a new jason file.")
+                testdef("file did not exist... fetching data... make a new json file.")
+                debug_logger("New json file is being created...")
             else:
                 testdef("Updating json file...")
+                debug_logger("Json file updated...")
             source = response.read()
             if testmode:
                 config.set("file", "updated_testmode", str(datetime.now().strftime(timestampStandard)))
             else:
                 config.set("file", "updated", str(datetime.now().strftime(timestampStandard)))
-            updateconfig() 
+            updateconfig() # TODO check if the date actually gets updated in the ini file. seems like the testmode is, but not sure if the regular is.
             timecheck = datetime.now()
             jupdate = timecheck.strftime(timestampStandard)
             newday=False
@@ -151,6 +187,7 @@ def runProgram():
             print("Valid from: " + str(ts_from))
             print("Valid to: " + str(ts_to))
             print("\n")
+            debug_logger(f"Price: {str(price)} øre")
         elif ts_from.hour == datetime.now().hour and centertext == 1:
             s0 = "\n\n\n\n"
             s1 = (f"Price: {str(price)} øre - Region: {theregion}")
@@ -162,6 +199,7 @@ def runProgram():
             center_text(s2)
             center_text(s3)
             print(s4.center(textspace))
+            debug_logger(f"Price: {str(price)} øre")
             try:
                 for timestamp in data.keys():
                     price_next = int((data[timestamp]["NOK_per_kWh"]) * 100)
@@ -174,6 +212,7 @@ def runProgram():
                         center_text("Price next hour: " + str(priceNextrHour) + " øre" )
             except:
                 text_except = "json is not updated to show next hour."
+                debug_logger(" - Price for the next hour can not be shown.")
                 center_text(text_except)
 
 #Now, this will run the program in a loop
@@ -185,6 +224,7 @@ while True:
     clear()
     if testmode:
         print("Testmode Activated")
+    #check if update of the json is needed
     checkNeedUpdate()
     runProgram()
     #this will make the loop count down and check again each hour. 
