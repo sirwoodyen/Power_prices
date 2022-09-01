@@ -1,1 +1,1 @@
-sudo python price.py
+sudo python main.py
